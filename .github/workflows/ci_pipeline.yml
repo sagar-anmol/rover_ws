@@ -1,0 +1,48 @@
+name: Rover ROS 2 CI Pipeline
+
+
+on:
+  pull_request:
+    branches:
+      - test
+      - main
+
+jobs:
+  build-and-test:
+    name: Compile C++ and Run gtest
+    runs-on: ubuntu-22.04
+    
+    
+    container:
+      image: osrf/ros:humble-desktop
+
+    steps:
+      
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      
+      - name: Install ROS Dependencies (rosdep)
+        run: |
+          apt-get update
+          apt-get install -y python3-colcon-common-extensions build-essential
+          rosdep update
+          rosdep install --from-paths src --ignore-src -r -y
+
+      
+      - name: Build Workspace (colcon build)
+        run: |
+          . /opt/ros/humble/setup.sh
+          colcon build --symlink-install --event-handlers console_direct+
+
+      
+      - name: Run Automated Tests (colcon test)
+        run: |
+          . /opt/ros/humble/setup.sh
+          . install/setup.sh
+          colcon test --event-handlers console_direct+
+
+      
+      - name: Verify Test Results
+        run: |
+          colcon test-result --all
